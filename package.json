@@ -1,0 +1,26 @@
+{
+  "name": "sentry402",
+  "version": "0.1.0",
+  "description": "x402-native counterparty address screening for agents. Sells evidence, never clearance.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "ingest": "node src/ingest.js",
+    "agent": "node agent.js",
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@x402/core": "^2.18.0",
+    "@x402/evm": "^2.18.0",
+    "@x402/express": "^2.18.0",
+    "@x402/extensions": "^2.18.0",
+    "@x402/fetch": "^2.18.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "viem": "^2.55.2"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

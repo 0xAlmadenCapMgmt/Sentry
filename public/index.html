@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentry402 — evidence, not clearance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFF3F1;
+    --ink:#101820;
+    --ink-soft:#3D4A4E;
+    --amber:#C88A00;
+    --alert:#B3402A;
+    --petrol:#17555A;
+    --wire-bg:#0F211F;
+    --wire-dim:#5E7A74;
+    --wire-text:#D7E4DF;
+    --rule:#C9D3CF;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Archivo',system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--petrol)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  header{padding:28px 0;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--rule)}
+  .brand{font-weight:900;letter-spacing:-0.02em;font-size:20px}
+  .brand .num{color:var(--amber);font-family:var(--mono);font-weight:600}
+  header nav{font-family:var(--mono);font-size:13px}
+  header nav a{margin-left:20px;text-decoration:none}
+
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:72px 0 64px}
+  h1{font-weight:900;font-size:clamp(38px,5vw,58px);line-height:1.02;letter-spacing:-0.03em;text-transform:uppercase}
+  h1 .ev{color:var(--amber)}
+  .lede{margin-top:20px;font-size:18px;color:var(--ink-soft);max-width:46ch}
+  .lede code{font-family:var(--mono);font-size:15px;background:#E1E8E5;padding:1px 6px;border-radius:3px}
+  .cta{margin-top:28px;display:flex;gap:14px;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:14px;text-decoration:none;padding:12px 20px;border-radius:4px}
+  .btn-fill{background:var(--ink);color:var(--paper)}
+  .btn-line{border:1.5px solid var(--ink);color:var(--ink)}
+
+  .wire{background:var(--wire-bg);border-radius:8px;padding:26px 24px;font-family:var(--mono);font-size:13px;line-height:1.85;color:var(--wire-text);box-shadow:0 24px 60px -30px rgba(15,33,31,.55)}
+  .wire .dim{color:var(--wire-dim)}
+  .wire .amber{color:#F2B93E;font-weight:600}
+  .wire .ok{color:#7CD9A6;font-weight:600}
+  .wire .flag{color:#F08A70;font-weight:600}
+  .wire .arrow{color:var(--wire-dim);user-select:none}
+  .wire-step{opacity:0;transform:translateY(6px);transition:opacity .5s ease,transform .5s ease}
+  .wire-step.on{opacity:1;transform:none}
+  .wire hr{border:0;border-top:1px dashed #2A413D;margin:10px 0}
+  @media (prefers-reduced-motion: reduce){ .wire-step{opacity:1;transform:none;transition:none} }
+
+  section{padding:56px 0;border-top:1px solid var(--rule)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:600}
+  h2{font-weight:800;font-size:30px;letter-spacing:-0.02em;margin-top:10px}
+  .sub{margin-top:10px;color:var(--ink-soft);max-width:70ch}
+
+  /* freshness board — the trust page, rendered from /v1/sources */
+  .board{margin-top:28px;border:1px solid var(--rule);border-radius:8px;background:#FAFCFB;overflow:hidden}
+  .row{display:grid;grid-template-columns:92px 1fr 130px 130px;gap:20px;padding:20px 24px;border-bottom:1px solid var(--rule);align-items:center}
+  .row:last-child{border-bottom:0}
+  .pill{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;padding:4px 10px;border-radius:99px;text-align:center}
+  .pill.fresh{background:#DCEEE3;color:#1E6A43}
+  .pill.stale{background:#F4DDD6;color:var(--alert)}
+  .row .title{font-weight:800;font-size:17px;letter-spacing:-0.01em}
+  .row .teaser{color:var(--ink-soft);font-size:14px;margin-top:3px}
+  .row .num{font-family:var(--mono);font-size:14px;text-align:right}
+  .row .num small{display:block;font-size:11px;color:var(--ink-soft)}
+  .board-empty{padding:24px;font-family:var(--mono);font-size:13px;color:var(--ink-soft)}
+  .board-foot{padding:14px 24px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);border-top:1px dashed var(--rule);word-break:break-all}
+
+  .how{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:28px}
+  .how h3{font-family:var(--mono);font-size:14px;font-weight:600;margin-bottom:8px}
+  .how p{font-size:15px;color:var(--ink-soft)}
+
+  /* rate table */
+  .rates{margin-top:28px;border:1px solid var(--rule);border-radius:8px;background:#FAFCFB;overflow:hidden;font-family:var(--mono);font-size:13.5px}
+  .rrow{display:grid;grid-template-columns:90px 1fr auto;gap:18px;padding:16px 24px;border-bottom:1px solid var(--rule)}
+  .rrow:last-child{border-bottom:0}
+  .rrow .p{color:var(--amber);font-weight:600}
+  .rrow .free{color:#1E6A43;font-weight:600}
+
+  pre.snippet{margin-top:24px;background:var(--wire-bg);color:var(--wire-text);font-family:var(--mono);font-size:13px;line-height:1.7;padding:22px;border-radius:8px;overflow-x:auto}
+  pre.snippet .c{color:var(--wire-dim)}
+
+  .fine{margin-top:22px;padding:18px 20px;border:1px dashed var(--rule);border-radius:8px;font-size:14px;color:var(--ink-soft)}
+  footer{padding:36px 0 48px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+  @media(max-width:840px){
+    .hero{grid-template-columns:1fr;gap:36px;padding:48px 0}
+    .how{grid-template-columns:1fr}
+    .row{grid-template-columns:92px 1fr;grid-auto-rows:auto}
+    .row .num{text-align:left}
+  }
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">SENTRY <span class="num">/402</span></div>
+    <nav><a href="#freshness">Sources</a><a href="#agents">For agents</a><a href="/v1/sources">sources.json</a></nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1><span class="ev">Evidence</span>,<br>not clearance.</h1>
+      <p class="lede">Before your agent transacts with a counterparty, it screens the address here for <code>$0.005</code> over <code>HTTP 402</code>. It gets back a timestamped, <strong>signed</strong> report of what public risk sources say — OFAC sanctions, phishing registries, scam darklists — with provenance on every finding. No account. No API key. The payment is the rate limit.</p>
+      <div class="cta">
+        <a class="btn btn-fill" href="/v1/sources">Inspect the sources</a>
+        <a class="btn btn-line" href="#agents">Point your agent here</a>
+      </div>
+    </div>
+
+    <div class="wire" aria-label="Example x402 screening exchange">
+      <div class="wire-step" data-step="1">
+        <span class="arrow">→</span> GET /v1/screen/0x098B…2f96
+      </div>
+      <div class="wire-step" data-step="2">
+        <span class="arrow">←</span> <span class="amber">402 Payment Required</span><br>
+        <span class="dim">&nbsp;&nbsp;accepts: exact · $0.005 USDC · Base</span>
+      </div>
+      <hr>
+      <div class="wire-step" data-step="3">
+        <span class="arrow">→</span> GET /v1/screen/0x098B…2f96<br>
+        <span class="dim">&nbsp;&nbsp;X-PAYMENT: eyJzY2hlbWUiOiJleGFjdCIsIm5ldC4…</span>
+      </div>
+      <div class="wire-step" data-step="4">
+        <span class="arrow">←</span> <span class="ok">200 OK</span> <span class="dim">· settled</span><br>
+        <span class="dim">&nbsp;&nbsp;{ "verdict": <span class="flag">"flagged"</span>,</span><br>
+        <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;"findings": [{ "source": "OFAC_SDN", "category": "sanctions", … }],</span><br>
+        <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;"receipt": { "id": "rcpt_9f2c…", "signature": "0x…" } }</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="freshness">
+    <div class="eyebrow">Source freshness</div>
+    <h2>What we check, and how fresh it is</h2>
+    <p class="sub">Every screening response names its sources and their snapshot times, and discloses staleness. This board renders live from <a href="/v1/sources">/v1/sources</a> — the same endpoint your agent reads.</p>
+    <div class="board" id="board">
+      <div class="board-empty">Loading /v1/sources …</div>
+    </div>
+  </section>
+
+  <section id="agents">
+    <div class="eyebrow">For agents &amp; their operators</div>
+    <h2>Screen, pay, verify</h2>
+    <div class="how">
+      <div><h3>1 · Screen</h3><p>One GET per counterparty address. EVM (bare hex or CAIP-10) fully covered; BTC/TRX and friends against OFAC. Verdict is <strong>flagged</strong>, <strong>no_findings</strong>, or <strong>unknown</strong> — never “safe”.</p></div>
+      <div><h3>2 · Pay</h3><p>The 402 response carries exact payment requirements. Your wallet signs a USDC transfer authorization; a facilitator verifies and settles on Base. Invalid input is rejected <em>before</em> the gate — garbage is never charged.</p></div>
+      <div><h3>3 · Verify</h3><p>Every response embeds a signed attestation receipt. Recover the signer from <code style="font-family:var(--mono);font-size:13px">keccak256(canonical_json)</code> and compare with the published key — or fetch the receipt URL any time later. The audit trail is the product.</p></div>
+    </div>
+
+    <div class="rates" aria-label="Endpoints and prices">
+      <div class="rrow"><span class="free">free</span><span>GET /v1/sources — source list, freshness, signing pubkey</span><span></span></div>
+      <div class="rrow"><span class="free">free</span><span>GET /v1/receipts/:id — verify a past attestation</span><span></span></div>
+      <div class="rrow"><span class="p">$0.005</span><span>GET /v1/screen/:address</span><span>per check</span></div>
+      <div class="rrow"><span class="p">$0.02</span><span>POST /v1/screen/batch</span><span>≤ 50 addresses</span></div>
+    </div>
+
+    <pre class="snippet"><span class="c">// buyer side — the 402 is handled for you</span>
+import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
+import { ExactEvmScheme } from "@x402/evm/exact/client";
+import { privateKeyToAccount } from "viem/accounts";
+
+const signer = privateKeyToAccount(process.env.AGENT_PRIVATE_KEY);
+const client = new x402Client().register("eip155:8453", new ExactEvmScheme(signer));
+const fetchPay = wrapFetchWithPayment(fetch, client);
+
+const res = await fetchPay("https://sentry402.example/v1/screen/" + counterparty);
+const { verdict, findings, receipt } = await res.json();
+<span class="c">// route on verdict; archive receipt — it's your audit trail</span></pre>
+
+    <div class="fine" id="disclaimer">
+      Screening reports are evidence of presence or absence on the listed public sources at the stated time. They are not a safety determination, not an endorsement, and not financial or legal advice. Receipts are signed by <span id="signer" style="font-family:var(--mono);font-size:12.5px">…</span>
+    </div>
+  </section>
+
+  <footer>
+    <span>Sentry402 · x402 · USDC on Base</span>
+    <span>sells evidence · never clearance</span>
+  </footer>
+</div>
+
+<script>
+  // Freshness board — rendered from the same endpoint agents use.
+  fetch('/v1/sources').then(r => r.json()).then(data => {
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    for (const s of data.sources) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const age = s.snapshot_time
+        ? ((Date.now() - Date.parse(s.snapshot_time)) / 36e5).toFixed(1) + ' h ago'
+        : 'never';
+      row.innerHTML =
+        '<div class="pill"></div>' +
+        '<div><div class="title"></div><div class="teaser"></div></div>' +
+        '<div class="num records"><small>records</small></div>' +
+        '<div class="num age"><small>last snapshot</small></div>';
+      const pill = row.querySelector('.pill');
+      pill.textContent = s.stale ? 'STALE' : 'FRESH';
+      pill.classList.add(s.stale ? 'stale' : 'fresh');
+      row.querySelector('.title').textContent = s.source;
+      row.querySelector('.teaser').textContent = s.description;
+      row.querySelector('.records').prepend(String(s.record_count));
+      row.querySelector('.age').prepend(age);
+      board.appendChild(row);
+    }
+    const foot = document.createElement('div');
+    foot.className = 'board-foot';
+    foot.textContent = 'SLA ' + data.sla_hours + 'h · receipts signed by ' + data.receipt_signing.address;
+    board.appendChild(foot);
+    document.getElementById('signer').textContent = data.receipt_signing.address;
+  }).catch(() => {
+    document.getElementById('board').innerHTML =
+      '<div class="board-empty">/v1/sources unavailable. Is the server running?</div>';
+  });
+
+  const steps = document.querySelectorAll('.wire-step');
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    steps.forEach((el, i) => setTimeout(() => el.classList.add('on'), 400 + i * 650));
+  } else {
+    steps.forEach(el => el.classList.add('on'));
+  }
+</script>
+</body>
+</html>
