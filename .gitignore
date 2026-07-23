@@ -2,6 +2,7 @@ node_modules/
 .env
 x402-tollbooth.zip
 .claude/settings.local.json
+.claude/settings.local.json
 data/
 *.db
 *.db-journal
