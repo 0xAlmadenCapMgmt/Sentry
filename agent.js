@@ -56,8 +56,16 @@ async function main() {
     console.error(`Failed: ${res.status} ${await res.text()}`);
     process.exit(1);
   }
-  const settlement = res.headers.get("x-payment-response");
-  if (settlement) console.log(`Settled on-chain (X-PAYMENT-RESPONSE header present).`);
+  const settlementHeader = res.headers.get("payment-response");
+  if (settlementHeader) {
+    try {
+      const s = JSON.parse(Buffer.from(settlementHeader, "base64").toString());
+      console.log(`Settled on-chain: tx ${s.transaction}`);
+      if (NETWORK === "eip155:84532") console.log(`  https://sepolia.basescan.org/tx/${s.transaction}`);
+    } catch {
+      console.log("Settled (payment-response header present).");
+    }
+  }
 
   const report = await res.json();
   console.log(`\nVerdict: ${report.verdict.toUpperCase()}`);

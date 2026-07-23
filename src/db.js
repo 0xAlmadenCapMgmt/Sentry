@@ -142,6 +142,11 @@ function getReceipt(db, id) {
   return db.prepare("SELECT * FROM receipts WHERE id = ?").get(id);
 }
 
+/** Link a receipt to its on-chain settlement once the payment header lands. */
+function updateReceiptPaymentRef(db, id, paymentRef) {
+  db.prepare("UPDATE receipts SET payment_ref = ? WHERE id = ?").run(paymentRef, id);
+}
+
 module.exports = {
   openDb,
   replaceSourceFindings,
@@ -152,4 +157,5 @@ module.exports = {
   countFindings,
   insertReceipt,
   getReceipt,
+  updateReceiptPaymentRef,
 };

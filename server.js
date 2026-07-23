@@ -18,7 +18,7 @@ const express = require("express");
 const path = require("path");
 
 const defaults = require("./src/config");
-const { openDb, latestOkSnapshot, latestSnapshot, countFindings, getReceipt } = require("./src/db");
+const { openDb, latestOkSnapshot, latestSnapshot, countFindings, getReceipt, updateReceiptPaymentRef } = require("./src/db");
 const { screenAddress } = require("./src/screen");
 const { makeSigner, issueReceipt, SIGNING_SCHEME } = require("./src/receipts");
 const { parseAddress, InvalidAddressError } = require("./src/normalize");
@@ -173,6 +173,24 @@ function createApp(overrides = {}) {
 
   const baseUrlOf = (req) => `${req.protocol}://${req.get("host")}`;
 
+  // The x402 middleware attaches the settlement result (incl. on-chain tx hash)
+  // as the `payment-response` header at response-finish — after our handler has
+  // run. Hook `finish` to decode it and link it into the receipt(s) we issued,
+  // so the durable audit trail points at the paid transaction. Absent in dev mode.
+  const linkSettlementOnFinish = (res, receiptIds) => {
+    res.on("finish", () => {
+      try {
+        const h = res.getHeader("payment-response");
+        if (!h) return;
+        const settlement = JSON.parse(Buffer.from(String(h), "base64").toString());
+        const ref = JSON.stringify(settlement);
+        for (const id of receiptIds) updateReceiptPaymentRef(db, id, ref);
+      } catch {
+        /* header missing/opaque — receipt simply keeps payment_ref: null */
+      }
+    });
+  };
+
   // ---------------------------------------------------------------------------
   // Free endpoints
   // ---------------------------------------------------------------------------
@@ -256,10 +274,8 @@ function createApp(overrides = {}) {
   app.get("/v1/screen/:address", async (req, res, next) => {
     try {
       const report = screenAddress(db, req.params.address, config);
-      const paymentRef = res.getHeader("X-PAYMENT-RESPONSE")
-        ? JSON.stringify({ x_payment_response: String(res.getHeader("X-PAYMENT-RESPONSE")) })
-        : null;
-      const receipt = await issueReceipt(db, account, report, baseUrlOf(req), paymentRef);
+      const receipt = await issueReceipt(db, account, report, baseUrlOf(req), null);
+      linkSettlementOnFinish(res, [receipt.id]);
       res.json({ ...report, receipt });
     } catch (err) {
       if (err instanceof InvalidAddressError) return res.status(400).json({ error: err.message });
@@ -271,10 +287,12 @@ function createApp(overrides = {}) {
     try {
       const baseUrl = baseUrlOf(req);
       const results = [];
+      const receiptIds = [];
       for (const input of req.body.addresses) {
         try {
           const report = screenAddress(db, input, config);
           const receipt = await issueReceipt(db, account, report, baseUrl, null);
+          receiptIds.push(receipt.id);
           results.push({ ...report, receipt });
         } catch (err) {
           if (err instanceof InvalidAddressError) {
@@ -284,6 +302,8 @@ function createApp(overrides = {}) {
           }
         }
       }
+      // One payment settles the whole batch — link it to every receipt issued.
+      linkSettlementOnFinish(res, receiptIds);
       res.json({ count: results.length, results, checked_at: new Date().toISOString() });
     } catch (err) {
       next(err);
