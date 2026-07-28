@@ -81,9 +81,10 @@ Free endpoints (`/v1/health`, `/v1/sources`, `/v1/receipts/:id`) stayed open.
 ### 2.5 Stage 2 — real testnet payment, end-to-end — ✅ **PASSED**
 `node agent.js` ran the full loop against Base Sepolia via the free x402.org facilitator.
 
-**Wallets** (MetaMask, Base Sepolia; public addresses only — keys never leave `.env`):
-- Buyer (agent): `[redacted-send-address]`
-- Receiver (`PAY_TO`): `[redacted-recv-address]`
+**Wallets** (MetaMask, Base Sepolia). Addresses are kept out of this public repo; the
+labeled registry with addresses lives only in the local, git-ignored `docs/WALLETS.md`:
+- `Sentry_AI_Send_BaseSepTest` — buyer / agent (maps to `AGENT_PRIVATE_KEY`, key in `.env` only)
+- `Sentry_AI_Rec_BaseSepTest` — service `PAY_TO` (receive only; no key)
 
 **Result of the loop:** `402` challenge → buyer signs an EIP-3009 `transferWithAuthorization`
 (gasless for the payer — the facilitator submits and pays gas) → facilitator settles 0.005
@@ -96,9 +97,7 @@ receipt signature.
 | Verdict correct | `flagged` — Lazarus Group, OFAC SDN, with provenance |
 | Receipt signature | recovers to the server's published signing address ✓ |
 | Buyer needs no ETH | held 0 ETH; gasless scheme confirmed ✓ |
-| Settlement tx (run 2) | `[redacted-tx]` |
-
-Explorer: https://sepolia.basescan.org/tx/[redacted-tx]
+| Settlement tx | recorded in local `WALLETS.md` / receipt `payment_ref`; omitted here (resolves to the wallet addresses on-chain) |
 
 **Cumulative:** 4 settled payments during testing = **0.02 USDC** moved buyer→receiver;
 buyer balance now 0.98 USDC. All 4 settled successfully.
@@ -116,7 +115,7 @@ Fixed (commit `5050b63`):
   product" thesis.
 - `src/db.js` gained `updateReceiptPaymentRef`.
 
-Verified: `payment_ref` populated with tx `0x0c38a21a…f94ab`; 21 tests still green.
+Verified: `payment_ref` populated with the on-chain settlement tx; 21 tests still green.
 
 ---
 
