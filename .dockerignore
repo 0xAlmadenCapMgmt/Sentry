@@ -1,0 +1,17 @@
+# Never bake these into the image
+node_modules
+.git
+.gitignore
+.env
+.env.example
+data
+backups
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.DS_Store
+docs/WALLETS.md
+x402-tollbooth.zip
+.claude
+test

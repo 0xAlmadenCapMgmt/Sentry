@@ -58,6 +58,10 @@ function createApp(overrides = {}) {
   const paymentsEnabled = Boolean(config.payTo);
 
   const app = express();
+  // Behind a cloud load balancer/proxy, honor X-Forwarded-Proto so req.protocol
+  // is "https" — otherwise the 402 challenge's resource.url and every receipt
+  // verify_url would be emitted as http://. No effect on local (no such header).
+  app.set("trust proxy", true);
   app.use(express.json({ limit: "100kb" }));
   app.use(express.static(path.join(__dirname, "public")));
 

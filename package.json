@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "ingest": "node src/ingest.js",
+    "backup": "node src/backup.js",
     "agent": "node agent.js",
     "test": "node --test"
   },
