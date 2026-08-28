@@ -1,0 +1,12 @@
+{
+  "containerName": "sentry402",
+  "containerPort": 4023,
+  "healthCheck": {
+    "path": "/v1/health",
+    "successCodes": "200",
+    "intervalSeconds": 30,
+    "timeoutSeconds": 5,
+    "healthyThreshold": 2,
+    "unhealthyThreshold": 3
+  }
+}

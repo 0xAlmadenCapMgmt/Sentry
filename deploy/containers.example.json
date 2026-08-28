@@ -1,0 +1,15 @@
+{
+  "sentry402": {
+    "image": "ghcr.io/0xalmadencapmgmt/sentry:latest",
+    "environment": {
+      "NETWORK": "eip155:84532",
+      "FACILITATOR_URL": "https://x402.org/facilitator",
+      "PORT": "4023",
+      "PAY_TO_ADDRESS": "REPLACE_WITH_Sentry_AI_Rec_BaseSepTest_ADDRESS",
+      "RECEIPT_SIGNING_KEY": "REPLACE_WITH_PERSISTENT_0x_SIGNING_KEY"
+    },
+    "ports": {
+      "4023": "HTTP"
+    }
+  }
+}

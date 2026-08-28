@@ -3,6 +3,7 @@ node_modules/
 .DS_Store
 docs/WALLETS.md
 backups/
+deploy/containers.json
 x402-tollbooth.zip
 data/
 *.db

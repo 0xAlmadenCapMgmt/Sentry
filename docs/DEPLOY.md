@@ -43,33 +43,43 @@ Publish nothing but the derived address — it already appears at `/v1/sources`.
 
 ---
 
-## 3a — Lightsail Container Service
+## 3a — Lightsail Container Service (image built in CI, no local Docker)
 
-Prereqs: AWS account, AWS CLI + the `lightsailctl` plugin, Docker locally (to build).
+Prereqs: AWS account, AWS CLI (already installed). The image is built by GitHub Actions
+([`.github/workflows/build.yml`](../.github/workflows/build.yml)) and published to GHCR —
+no Docker on your Mac.
 
+**One-time image setup**
+1. Push to `main` (or run the *build-image* workflow via **Actions → Run workflow**). It
+   publishes `ghcr.io/0xalmadencapmgmt/sentry:latest`.
+2. Make that GHCR package **public** so Lightsail can pull it anonymously:
+   GitHub → your profile → **Packages** → `sentry` → **Package settings** → *Change
+   visibility* → **Public**. (The image holds only app code — no secrets; `.dockerignore`
+   excludes `.env`, `WALLETS.md`, etc. A private image is possible but needs registry
+   creds in the deployment.)
+
+**Deploy**
 ```bash
-# 1. Build the image
-docker build -t sentry402 .
+# 1. Create the service (nano is plenty)
+aws lightsail create-container-service --service-name sentry402 --power nano --scale 1
+# ...wait until: aws lightsail get-container-services --service-name sentry402
+#    shows "state": "READY"
 
-# 2. Create a container service (nano is plenty for this workload)
-aws lightsail create-container-service \
-  --service-name sentry402 --power nano --scale 1
+# 2. Fill secrets into a LOCAL, git-ignored copy of the container config
+cp deploy/containers.example.json deploy/containers.json
+#    edit deploy/containers.json: set PAY_TO_ADDRESS and RECEIPT_SIGNING_KEY
 
-# 3. Push the local image (returns a ref like :sentry402.sentry402.N)
-aws lightsail push-container-image \
-  --service-name sentry402 --label sentry402 --image sentry402:latest
+# 3. Deploy
+aws lightsail create-container-service-deployment \
+  --service-name sentry402 \
+  --containers file://deploy/containers.json \
+  --public-endpoint file://deploy/public-endpoint.json
 ```
 
-Then create a deployment (via the console, or a `containers.json` + `public-endpoint.json`)
-with:
-- image = the pushed ref from step 3
-- environment = the vars above (leave `DISABLE_AUTO_INGEST` **unset** so the container
-  ingests on boot and on the 24 h interval — Container Service has no separate cron)
-- public endpoint = container port `4023`, health check path `/v1/health`
-
-Lightsail returns a managed HTTPS URL like `https://sentry402.<hash>.us-east-1.cs.amazonlightsail.com`.
-Because we set `trust proxy`, receipt `verify_url`s and the 402 `resource.url` come back
-as `https://` automatically.
+`DISABLE_AUTO_INGEST` is intentionally unset, so the container ingests on boot and on the
+24 h interval (Container Service has no separate cron). Lightsail returns a managed HTTPS
+URL like `https://sentry402.<hash>.<region>.cs.amazonlightsail.com`; because we set
+`trust proxy`, receipt `verify_url`s and the 402 `resource.url` come back as `https://`.
 
 ### Verify 3a (the Stage 3 milestone)
 ```bash
