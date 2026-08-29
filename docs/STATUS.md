@@ -20,7 +20,7 @@ from "does the money work" from "does it run remotely" from "is it real money."
 | **1** | Ingestion + SQLite + screening logic, no payments | ✅ Done & verified |
 | **2** | x402 payment gate on **testnet** (Base Sepolia), real settlement | ✅ **Done & verified 2026-07-23** |
 | **3a** | **Cloud hosting** — public endpoint on AWS, agent pays it on testnet | ✅ **Done & verified 2026-08-29** |
-| **3b** | Hardening — HTTPS/TLS (✅ done, Caddy + auto-cert), scheduled off-host backups (◻️ in setup) | 🔄 In progress |
+| **3b** | Hardening — HTTPS/TLS (Caddy + auto-cert) + off-host backups (auto-snapshots + daily receipt dump) | ✅ **Done 2026-08-29** |
 | **4** | **Mainnet** (Base) + CDP facilitator + Bazaar catalog + KMS | ◻️ Planned |
 
 Stages 3 and 4 are intentionally split so that infrastructure problems (DNS, TLS,
