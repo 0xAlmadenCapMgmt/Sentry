@@ -100,24 +100,35 @@ If that settles and verifies, Stage 3's goal is met: agent ↔ cloud payment wor
 
 ---
 
-## 3b — Durable receipts (before mainnet)
+## 3b — HTTPS + durable receipts (before mainnet)
 
-Container Service can't persist SQLite. Two options:
+We deploy on a **Lightsail instance** (the account's Container-Service quota was 0), which
+also gives a durable disk. The reproducible stack is [`deploy/docker-compose.yml`](../deploy/docker-compose.yml)
++ [`deploy/Caddyfile`](../deploy/Caddyfile): the app image behind **Caddy**, which gets an
+automatic Let's Encrypt cert.
 
-1. **Lightsail Instance + block-storage disk** (keeps SQLite): launch a small instance,
-   attach a disk, mount at `/data`, run the same image with `-v /data:/data` and
-   `DB_PATH=/data/sentry402.db`. Front it with Caddy for automatic HTTPS (a hostname —
-   a real domain, or `<ip>.sslip.io` to avoid buying one). Move ingestion to the box's
-   `cron` (`npm run ingest`) and set `DISABLE_AUTO_INGEST=1`.
-2. **Managed DB** (Postgres/Turso): survives statelessly but is a code change
-   (`node:sqlite` → a network client). Defer unless horizontal scale is needed.
-
-### Off-host receipt backup (either option)
-Receipts cannot be regenerated. Schedule a daily backup + sync:
+### HTTPS (Caddy + sslip.io, no domain purchase)
+`SITE_ADDRESS=<ip>.sslip.io` resolves the IP-encoded hostname back to the instance, so
+Caddy can issue a real cert. Keep firewall ports 80 (ACME challenge) and 443 open.
 ```bash
-BACKUP_DIR=/data/backups npm run backup
-aws s3 sync /data/backups s3://<your-bucket>/sentry402-receipts/
+export SITE_ADDRESS=<your-static-ip>.sslip.io   # e.g. 203.0.113.10.sslip.io
+docker compose -f deploy/docker-compose.yml up -d
 ```
+`trust proxy` (set in the app) then emits `https://<host>/…` for the 402 `resource.url`
+and every receipt `verify_url`. Verify: `curl https://$SITE_ADDRESS/v1/health`.
+
+### Durable receipts + off-host backup
+Receipts cannot be regenerated. The DB + receipts already live on the durable volume
+(`sentry-data`). For off-host safety:
+
+1. **Lightsail automatic snapshots** — enable in the console (Instance → Snapshots →
+   automatic). Whole-instance, off-host, no credentials needed. Simplest baseline.
+2. **Portable receipt dumps** (daily cron on the box):
+   ```bash
+   docker exec -e BACKUP_DIR=/data/backups sentry402 npm run backup
+   ```
+   writes timestamped JSON to the durable volume. To push truly off-box, add AWS creds and
+   `aws s3 sync ~/sentry-data/backups s3://<bucket>/sentry402-receipts/`.
 
 ---
 

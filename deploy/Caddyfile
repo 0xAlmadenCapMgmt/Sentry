@@ -1,0 +1,7 @@
+# Caddy reverse proxy for Sentry402 (Stage 3b — automatic HTTPS).
+# SITE_ADDRESS is the public hostname: use <ip>.sslip.io for free TLS with no
+# domain purchase (sslip.io resolves the IP-encoded name back to your IP), or
+# point your own domain's A record at the instance and use that instead.
+{$SITE_ADDRESS} {
+    reverse_proxy sentry402:4023
+}

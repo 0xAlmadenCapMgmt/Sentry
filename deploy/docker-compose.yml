@@ -1,0 +1,37 @@
+# Stage 3b stack: Sentry402 behind Caddy with automatic HTTPS.
+#
+# On the host, alongside this file, provide:
+#   - sentry.env   (secrets: PAY_TO_ADDRESS, RECEIPT_SIGNING_KEY, NETWORK, FACILITATOR_URL)
+#   - Caddyfile    (this repo's deploy/Caddyfile)
+#   - SITE_ADDRESS env var, e.g.  export SITE_ADDRESS=<ip>.sslip.io
+# Then:  docker compose up -d
+#
+# Data (SQLite + receipts) and Caddy's certs live on named volumes, so they
+# survive restarts and redeploys. Never commit sentry.env.
+services:
+  sentry402:
+    image: ghcr.io/0xalmadencapmgmt/sentry:latest
+    restart: unless-stopped
+    env_file: [./sentry.env]
+    volumes:
+      - sentry-data:/data
+    networks: [sentry-net]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS, e.g. 203.0.113.10.sslip.io}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    networks: [sentry-net]
+    depends_on: [sentry402]
+
+volumes:
+  sentry-data:
+  caddy-data:
+
+networks:
+  sentry-net:
