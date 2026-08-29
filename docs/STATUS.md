@@ -19,8 +19,9 @@ from "does the money work" from "does it run remotely" from "is it real money."
 |---|---|---|
 | **1** | Ingestion + SQLite + screening logic, no payments | ✅ Done & verified |
 | **2** | x402 payment gate on **testnet** (Base Sepolia), real settlement | ✅ **Done & verified 2026-07-23** |
-| **3** | **Cloud hosting** — public HTTPS endpoint, still on testnet | ◻️ Next — host decision pending |
-| **4** | **Mainnet** (Base) + CDP facilitator + Bazaar catalog + hardening | ◻️ Planned |
+| **3a** | **Cloud hosting** — public endpoint on AWS, agent pays it on testnet | ✅ **Done & verified 2026-08-29** |
+| **3b** | Hardening — HTTPS/TLS in front, scheduled off-host receipt backups | ◻️ Next |
+| **4** | **Mainnet** (Base) + CDP facilitator + Bazaar catalog + KMS | ◻️ Planned |
 
 Stages 3 and 4 are intentionally split so that infrastructure problems (DNS, TLS,
 persistence, ingestion scheduling) are diagnosed on free testnet money before real funds
@@ -116,6 +117,23 @@ Fixed (commit `5050b63`):
 - `src/db.js` gained `updateReceiptPaymentRef`.
 
 Verified: `payment_ref` populated with the on-chain settlement tx; 21 tests still green.
+
+### 2.7 Stage 3a — cloud deployment, end-to-end — ✅ **PASSED (2026-08-29)**
+The service now runs on **AWS Lightsail** (a Docker container from
+`ghcr.io/0xalmadencapmgmt/sentry`, built by GitHub Actions), reachable over the public
+internet with the x402 gate on, a **persistent** signing key, and a **durable volume** for
+the DB + receipts.
+
+- Public `/v1/health` → `200` with the payment gate active (`eip155:84532`).
+- Ingestion runs on the box (OFAC/ScamSniffer/MEW; OFAC now 479 — live).
+- **The buyer agent, over the internet, paid the cloud service end-to-end:** 402 →
+  EIP-3009 authorization → on-chain settlement on Base Sepolia → `flagged` report →
+  receipt signature **verified** against the published key, with `payment_ref` linking the
+  settlement tx. (Endpoint/tx specifics kept in the local, git-ignored registry.)
+
+Note: 3a runs plain HTTP; TLS is the 3b hardening step. AWS put a 0-quota on Lightsail
+*container services* for this (new) account, so the deploy uses a Lightsail **instance**
+(VM) running the same image — which also gives the durable volume 3b wanted.
 
 ---
 
