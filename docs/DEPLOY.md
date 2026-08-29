@@ -59,6 +59,11 @@ no Docker on your Mac.
    creds in the deployment.)
 
 **Deploy**
+
+> ⚠️ **Region:** Lightsail is not offered in every region (e.g. `us-west-1` fails with
+> "Could not connect to the endpoint URL"). Use a supported region such as `us-west-2`.
+> Set it for the session so all commands inherit it: `export AWS_REGION=us-west-2`.
+
 ```bash
 # 1. Create the service (nano is plenty)
 aws lightsail create-container-service --service-name sentry402 --power nano --scale 1
