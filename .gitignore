@@ -12,3 +12,7 @@ data/
 *.db-shm
 .claude/settings.local.json
 .claude/launch.json
+
+# SSH keys / certs — never commit
+*.pem
+*.key
