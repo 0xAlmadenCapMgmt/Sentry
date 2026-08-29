@@ -19,6 +19,17 @@ module.exports = {
   batchPrice: process.env.BATCH_PRICE || "$0.02",
   batchMax: 50,
 
+  // Mainnet (Base) facilitator: Coinbase CDP. Only used when network is
+  // eip155:8453; testnet keeps the free x402.org facilitator above.
+  cdpApiKeyId: process.env.CDP_API_KEY_ID || null,
+  cdpApiKeySecret: process.env.CDP_API_KEY_SECRET || null,
+
+  // Rate limiting for the FREE endpoints (paid routes are self-limiting via
+  // payment). Per-IP fixed window; requires trust proxy (set) for real client
+  // IPs behind Caddy. Set RATE_LIMIT_MAX=0 to disable.
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10),
+  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || "120", 10),
+
   // Storage + signing
   dbPath: process.env.DB_PATH || path.join(ROOT, "data", "sentry402.db"),
   receiptSigningKey: process.env.RECEIPT_SIGNING_KEY || null,

@@ -22,6 +22,7 @@ const { openDb, latestOkSnapshot, latestSnapshot, countFindings, getReceipt, upd
 const { screenAddress } = require("./src/screen");
 const { makeSigner, issueReceipt, SIGNING_SCHEME } = require("./src/receipts");
 const { parseAddress, InvalidAddressError } = require("./src/normalize");
+const { rateLimiter } = require("./src/ratelimit");
 const { SOURCES } = require("./src/sources");
 const { ingestAll } = require("./src/ingest");
 const pkg = require("./package.json");
@@ -102,7 +103,22 @@ function createApp(overrides = {}) {
       bazaarResourceServerExtension,
     } = require("@x402/extensions/bazaar");
 
-    const facilitatorClient = new HTTPFacilitatorClient({ url: config.facilitatorUrl });
+    // Facilitator selection: Base mainnet settles through Coinbase's CDP
+    // facilitator (@coinbase/x402, authed with CDP_API_KEY_ID/SECRET); testnet
+    // uses the free x402.org facilitator. The CDP `facilitator` export is a
+    // { url, createAuthHeaders } config that HTTPFacilitatorClient accepts.
+    let facilitatorClient;
+    if (config.network === "eip155:8453") {
+      if (!config.cdpApiKeyId || !config.cdpApiKeySecret) {
+        throw new Error(
+          "Base mainnet requires CDP credentials: set CDP_API_KEY_ID and CDP_API_KEY_SECRET (Coinbase Developer Platform)."
+        );
+      }
+      const { facilitator } = require("@coinbase/x402");
+      facilitatorClient = new HTTPFacilitatorClient(facilitator);
+    } else {
+      facilitatorClient = new HTTPFacilitatorClient({ url: config.facilitatorUrl });
+    }
     const resourceServer = new x402ResourceServer(facilitatorClient).register(
       config.network,
       new ExactEvmScheme()
@@ -198,6 +214,10 @@ function createApp(overrides = {}) {
   // ---------------------------------------------------------------------------
   // Free endpoints
   // ---------------------------------------------------------------------------
+  // Rate-limit the unpaid, DB-backed routes (paid routes are self-limiting).
+  // /v1/health is left unlimited so container/LB health checks never trip it.
+  const freeLimiter = rateLimiter({ windowMs: config.rateLimitWindowMs, max: config.rateLimitMax });
+
   app.get("/v1/health", (req, res) => {
     res.json({
       ok: true,
@@ -210,7 +230,7 @@ function createApp(overrides = {}) {
   });
 
   // The trust page: what we check, how fresh it is, and the key that signs receipts.
-  app.get("/v1/sources", (req, res) => {
+  app.get("/v1/sources", freeLimiter, (req, res) => {
     const staleCutoff = Date.now() - config.sourceSlaHours * 3600 * 1000;
     res.json({
       service: "Sentry402",
@@ -255,7 +275,7 @@ function createApp(overrides = {}) {
 
   // Verify a past attestation. Anyone can recompute the hashes from `payload`
   // and recover the signer from `signature` — no trust in this server needed.
-  app.get("/v1/receipts/:id", (req, res) => {
+  app.get("/v1/receipts/:id", freeLimiter, (req, res) => {
     const row = getReceipt(db, req.params.id);
     if (!row) return res.status(404).json({ error: "no such receipt" });
     res.json({
@@ -362,9 +382,10 @@ if (require.main === module) {
     console.log(`Sentry402 running on http://localhost:${config.port}`);
     console.log(`  Receipts signed by: ${account.address}${config.receiptSigningKey ? "" : "  (EPHEMERAL dev key — set RECEIPT_SIGNING_KEY)"}`);
     if (paymentsEnabled) {
-      console.log(`  Network:     ${config.network}${config.network === "eip155:84532" ? " (Base Sepolia testnet)" : ""}`);
+      const mainnet = config.network === "eip155:8453";
+      console.log(`  Network:     ${config.network}${mainnet ? " (Base MAINNET — real USDC)" : config.network === "eip155:84532" ? " (Base Sepolia testnet)" : ""}`);
       console.log(`  Pay to:      ${config.payTo}`);
-      console.log(`  Facilitator: ${config.facilitatorUrl}`);
+      console.log(`  Facilitator: ${mainnet ? "Coinbase CDP (api.cdp.coinbase.com)" : config.facilitatorUrl}`);
       console.log(`  Prices:      screen ${config.screenPrice} · batch ${config.batchPrice}`);
     } else {
       console.log("  DEV MODE — payment gate disabled (set PAY_TO_ADDRESS to enable x402)");
